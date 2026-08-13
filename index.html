@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Farmer Challenge | Fix</title>
+    
+    <!-- Stable CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Lexend', sans-serif; background-color: #f0f4ed; }
+        .farm-card { background: white; border-bottom: 5px solid #3d5a37; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .nature-btn { background: linear-gradient(135deg, #4f772d 0%, #31572c 100%); color: white; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo } = React;
+
+        const VOCAB_DATA = [
+            { en: "Cabbage", id: "Kubis", img: "🥬" },
+            { en: "Rice Field", id: "Sawah", img: "🌾" },
+            { en: "Fertilizer", id: "Pupuk", img: "💩" },
+            { en: "Harvest", id: "Panen", img: "🧺" },
+            { en: "Plantation", id: "Perkebunan", img: "🌳" }
+        ];
+
+        const SCRAMBLE_WORDS = ["Farmers", "harvest", "tea", "in", "the", "morning"];
+
+        const App = () => {
+            const [step, setStep] = useState(0); 
+            const [studentName, setStudentName] = useState("");
+            const [scores, setScores] = useState({ vocab: 0, scramble: 0, quiz: 0 });
+            const [vocabIndex, setVocabIndex] = useState(0);
+            const [userScramble, setUserScramble] = useState([]);
+            const [shuffledWords, setShuffledWords] = useState([]);
+            const [writing, setWriting] = useState("");
+            const [startTime, setStartTime] = useState(null);
+
+            // --- NAVIGATION ---
+            const handleStart = () => {
+                console.log("Attempting to start with name:", studentName);
+                if (!studentName.trim()) {
+                    alert("Please enter your name / Masukkan nama.");
+                    return;
+                }
+                setStartTime(Date.now());
+                setStep(1);
+            };
+
+            const nextVocab = () => {
+                const isLast = vocabIndex === VOCAB_DATA.length - 1;
+                setScores(prev => ({ ...prev, vocab: prev.vocab + 20 }));
+                
+                if (isLast) {
+                    setShuffledWords([...SCRAMBLE_WORDS].sort(() => Math.random() - 0.5));
+                    setStep(2);
+                } else {
+                    setVocabIndex(v => v + 1);
+                }
+            };
+
+            const checkScramble = () => {
+                const isCorrect = userScramble.join(" ") === "Farmers harvest tea in the morning";
+                setScores(prev => ({ ...prev, scramble: isCorrect ? 100 : 40 }));
+                setStep(3);
+            };
+
+            const submitQuiz = (val) => {
+                setScores(prev => ({ ...prev, quiz: val }));
+                setStep(4);
+            };
+
+            // --- ANALYTICS (ONLY RUNS AT THE END) ---
+            const report = useMemo(() => {
+                if (step !== 5) return null;
+                
+                const total = Math.round(((scores.vocab + scores.scramble + scores.quiz) / 300) * 100);
+                const seconds = Math.floor((Date.now() - startTime) / 1000);
+                
+                let level = "Seedling";
+                let rec = "Needs more vocabulary practice.";
+                
+                if (total >= 80) { level = "Harvest-Ready"; rec = "Excellent! Ready for complex writing."; }
+                else if (total >= 50) { level = "Sprout"; rec = "Good work. Practice sentence patterns."; }
+
+                return { total, seconds, level, rec };
+            }, [step]);
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="w-full max-w-md">
+                        
+                        {/* 0. WELCOME */}
+                        {step === 0 && (
+                            <div className="farm-card p-8 text-center">
+                                <h1 className="text-2xl font-bold text-emerald-800 mb-2">Green Farmer Challenge</h1>
+                                <p className="text-gray-500 mb-6 italic text-sm underline">English Learning App</p>
+                                <input 
+                                    type="text" 
+                                    className="w-full p-4 border-2 border-emerald-100 rounded-xl mb-4 outline-none focus:border-emerald-500"
+                                    placeholder="Enter Full Name..."
+                                    value={studentName}
+                                    onChange={(e) => setStudentName(e.target.value)}
+                                />
+                                <button onClick={handleStart} className="w-full nature-btn p-4 rounded-xl shadow-lg active:scale-95 transition-transform">
+                                    START (MULAI) ⮕
+                                </button>
+                            </div>
+                        )}
+
+                        {/* 1. VOCAB */}
+                        {step === 1 && (
+                            <div className="farm-card p-8 text-center">
+                                <div className="text-xs font-bold text-emerald-600 mb-4 uppercase tracking-widest">Step 1: Vocabulary</div>
+                                <div className="text-7xl mb-4">{VOCAB_DATA[vocabIndex].img}</div>
+                                <h2 className="text-4xl font-bold text-emerald-900 mb-1">{VOCAB_DATA[vocabIndex].en}</h2>
+                                <p className="text-gray-400 italic mb-8 uppercase text-sm tracking-widest">({VOCAB_DATA[vocabIndex].id})</p>
+                                <button 
+                                    onClick={() => {
+                                        const m = new SpeechSynthesisUtterance(VOCAB_DATA[vocabIndex].en);
+                                        m.lang = 'en-US';
+                                        window.speechSynthesis.speak(m);
+                                    }} 
+                                    className="mb-8 w-16 h-16 bg-emerald-50 rounded-full mx-auto flex items-center justify-center text-2xl shadow-inner"
+                                >🔊</button>
+                                <button onClick={nextVocab} className="w-full nature-btn p-4 rounded-xl">NEXT WORD</button>
+                            </div>
+                        )}
+
+                        {/* 2. SCRAMBLE */}
+                        {step === 2 && (
+                            <div className="farm-card p-8">
+                                <h3 className="font-bold text-emerald-800 mb-4 uppercase text-sm">Step 2: Scramble</h3>
+                                <div className="bg-emerald-50 p-4 rounded-xl min-h-[80px] mb-4 flex flex-wrap gap-2 border-2 border-dashed border-emerald-200">
+                                    {userScramble.map((w, i) => (
+                                        <span key={i} className="bg-white px-2 py-1 rounded shadow-sm font-bold text-emerald-800">{w}</span>
+                                    ))}
+                                </div>
+                                <div className="flex flex-wrap gap-2 mb-8">
+                                    {shuffledWords.map((word, i) => (
+                                        <button 
+                                            key={i} 
+                                            onClick={() => {
+                                                setUserScramble([...userScramble, word]);
+                                                setShuffledWords(shuffledWords.filter((_, idx) => idx !== i));
+                                            }} 
+                                            className="bg-emerald-100 px-3 py-1 rounded text-emerald-800 font-medium"
+                                        >{word}</button>
+                                    ))}
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button onClick={() => { setUserScramble([]); setShuffledWords([...SCRAMBLE_WORDS].sort(() => Math.random() - 0.5)); }} className="border-2 border-emerald-800 text-emerald-800 p-3 rounded-xl font-bold">RESET</button>
+                                    <button onClick={checkScramble} className="nature-btn p-3 rounded-xl">SUBMIT</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 3. QUIZ */}
+                        {step === 3 && (
+                            <div className="farm-card p-8">
+                                <h3 className="font-bold text-emerald-800 mb-4">Step 3: Simple Quiz</h3>
+                                <div className="bg-amber-50 p-4 rounded-xl text-sm mb-6">
+                                    "Pak Agus is a farmer. Every morning he uses <b>fertilizer</b> to help the plants grow."
+                                </div>
+                                <p className="font-bold text-sm mb-4">What does Pak Agus use to help plants grow?</p>
+                                <div className="space-y-3">
+                                    <button onClick={() => submitQuiz(0)} className="w-full text-left p-4 border rounded-xl hover:bg-emerald-50">A. Water only</button>
+                                    <button onClick={() => submitQuiz(100)} className="w-full text-left p-4 border rounded-xl hover:bg-emerald-50">B. Fertilizer</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 4. WRITING */}
+                        {step === 4 && (
+                            <div className="farm-card p-8">
+                                <h3 className="font-bold text-emerald-800 mb-4">Final Step: Writing</h3>
+                                <p className="text-sm text-gray-600 mb-4">Write 1 sentence about your garden / Tulis 1 kalimat tentang kebunmu:</p>
+                                <textarea 
+                                    className="w-full border-2 border-emerald-100 rounded-xl p-4 h-32 mb-6"
+                                    placeholder="e.g. My garden is very green."
+                                    value={writing}
+                                    onChange={(e) => setWriting(e.target.value)}
+                                />
+                                <button onClick={() => setStep(5)} className="w-full nature-btn p-4 rounded-xl shadow-lg">FINISH 🏆</button>
+                            </div>
+                        )}
+
+                        {/* 5. RESULT */}
+                        {step === 5 && report && (
+                            <div className="farm-card p-8 text-center">
+                                <div className="text-5xl mb-4">👨‍🌾</div>
+                                <h2 className="text-2xl font-bold text-emerald-900 mb-2">Well Done, {studentName}!</h2>
+                                <div className="bg-gray-50 p-4 rounded-xl text-left space-y-2 mb-6">
+                                    <p className="text-sm"><b>Level:</b> {report.level}</p>
+                                    <p className="text-sm"><b>Score:</b> {report.total}%</p>
+                                    <p className="text-sm"><b>Time:</b> {report.seconds} seconds</p>
+                                    <hr />
+                                    <p className="text-xs text-emerald-700 italic"><b>Teacher's Note:</b> {report.rec}</p>
+                                </div>
+                                <button onClick={() => window.location.reload()} className="w-full border-2 border-gray-300 p-3 rounded-xl font-bold text-gray-500">PLAY AGAIN</button>
+                            </div>
+                        )}
+
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
